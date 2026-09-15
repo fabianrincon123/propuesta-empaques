@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Empaques</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --card:#162030;
+    --card-hover:#1b2838;
+    --teal:#00d4a8;
+    --teal-dim:rgba(0,212,168,0.14);
+    --red:#ff5c5c;
+    --red-dim:rgba(255,92,92,0.14);
+    --amber:#ffb454;
+    --amber-dim:rgba(255,180,84,0.14);
+    --text:#e6edf3;
+    --text-dim:#8b98a5;
+    --text-faint:#5b6572;
+    --border:#22303f;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px 12px;
+  }
+  .phone{
+    width:390px;
+    max-width:100%;
+    background:var(--bg);
+    border-radius:28px;
+    border:1px solid var(--border);
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);
+    min-height:820px;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .screen{ display:none; flex-direction:column; flex:1; min-height:0; }
+  .screen.active{ display:flex; }
+  .scroll{ overflow-y:auto; flex:1; padding:0 18px 18px; }
+
+  /* ---------- TOPBAR ---------- */
+  .topbar{
+    padding:18px 18px 14px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, #101826 0%, var(--bg) 100%);
+  }
+  .topbar-row{ display:flex; justify-content:space-between; align-items:center; }
+  .greet-label{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint); font-weight:600;}
+  .greet-name{font-size:19px; font-weight:700; margin-top:2px;}
+  .back-btn{
+    width:34px; height:34px; border-radius:10px; background:var(--card);
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text-dim);
+  }
+  .back-btn:hover{ background:var(--card-hover); }
+  .icon-btn{
+    width:34px; height:34px; border-radius:10px; background:var(--card);
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    color:var(--text-dim);
+  }
+
+  /* ---------- CARDS / GENERIC ---------- */
+  .section-title{ font-size:13px; font-weight:600; color:var(--text-dim); margin:20px 0 10px; }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:14px; margin-bottom:10px;
+  }
+  .stock-list{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    margin-top:10px; overflow:hidden;
+  }
+  .stock-row{
+    display:flex; align-items:center; gap:12px; padding:12px 14px;
+    border-bottom:1px solid var(--border);
+  }
+  .stock-row:last-child{ border-bottom:none; }
+  .stock-icon{
+    width:34px; height:34px; border-radius:9px; background:var(--teal-dim); color:var(--teal);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .stock-row-info{ flex:1; min-width:0; }
+  .stock-name{ font-size:13px; font-weight:600; }
+  .stock-code{ font-size:11px; color:var(--text-faint); margin-top:1px; }
+  .stock-qty{ font-size:16px; font-weight:700; text-align:right; white-space:nowrap; }
+  .stock-qty.low{ color:var(--amber); }
+  .stock-unit{ font-size:11px; color:var(--text-dim); margin-left:3px; font-weight:500; }
+
+  .cta{
+    background:var(--teal); color:#04140f; border:none; border-radius:12px;
+    padding:14px; font-size:14px; font-weight:700; cursor:pointer; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .cta:hover{ filter:brightness(1.05); }
+  .cta.secondary{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+  }
+  .cta.secondary:hover{ background:var(--card-hover); }
+  .cta:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  /* ---------- SCANNER ---------- */
+  .scan-area{
+    margin:18px; border-radius:18px; background:#05090f; border:1px solid var(--border);
+    height:250px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .scan-corner{ position:absolute; width:26px; height:26px; border-color:var(--teal); }
+  .scan-corner.tl{ top:14px; left:14px; border-top:3px solid; border-left:3px solid; border-radius:6px 0 0 0;}
+  .scan-corner.tr{ top:14px; right:14px; border-top:3px solid; border-right:3px solid; border-radius:0 6px 0 0;}
+  .scan-corner.bl{ bottom:14px; left:14px; border-bottom:3px solid; border-left:3px solid; border-radius:0 0 0 6px;}
+  .scan-corner.br{ bottom:14px; right:14px; border-bottom:3px solid; border-right:3px solid; border-radius:0 0 6px 0;}
+  .scan-line{
+    position:absolute; left:14px; right:14px; height:2px; background:var(--teal);
+    box-shadow:0 0 8px var(--teal); animation:scan 1.8s ease-in-out infinite;
+  }
+  @keyframes scan{ 0%{ top:20px; } 50%{ top:220px; } 100%{ top:20px; } }
+  .scan-hint{ font-size:12px; color:var(--text-faint); text-align:center; padding:0 30px; }
+
+  .divider-or{ display:flex; align-items:center; gap:10px; margin:16px 18px; color:var(--text-faint); font-size:11px; }
+  .divider-or::before, .divider-or::after{ content:""; flex:1; height:1px; background:var(--border); }
+
+  .manual-row{ display:flex; gap:8px; padding:0 18px; }
+  input[type=text], input[type=number], input[type=date], textarea, select{
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    border-radius:10px; padding:11px 12px; font-size:14px; font-family:var(--font); width:100%;
+  }
+  input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--teal); }
+  .field-label{ font-size:11px; color:var(--text-dim); margin-bottom:6px; font-weight:600; }
+  .field{ margin-bottom:14px; }
+  .error-msg{ color:var(--red); font-size:12px; padding:8px 18px 0; display:none; }
+
+  /* ---------- CONFIRM SCREEN ---------- */
+  .match-card{ display:flex; gap:12px; align-items:center; }
+  .match-icon{
+    width:52px; height:52px; border-radius:12px; background:var(--teal-dim); color:var(--teal);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .match-name{ font-size:15px; font-weight:700; }
+  .match-code{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+  .match-stock{ font-size:12px; color:var(--text-dim); margin-top:4px; }
+
+  .stepper{ display:flex; align-items:center; gap:14px; justify-content:center; margin:6px 0; }
+  .stepper button{
+    width:42px; height:42px; border-radius:12px; border:1px solid var(--border); background:var(--card);
+    color:var(--text); font-size:20px; cursor:pointer;
+  }
+  .stepper button:hover{ background:var(--card-hover); }
+  .stepper .qty-value{ font-size:26px; font-weight:700; min-width:50px; text-align:center; }
+
+  /* ---------- SUCCESS ---------- */
+  .success-wrap{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:40px 24px; gap:14px; flex:1; justify-content:center; }
+  .success-icon{
+    width:64px; height:64px; border-radius:50%; background:var(--teal-dim); color:var(--teal);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .success-title{ font-size:17px; font-weight:700; }
+  .success-sub{ font-size:13px; color:var(--text-dim); line-height:1.5; }
+
+  /* ---------- DOCUMENT ---------- */
+  .doc-sheet{
+    background:#f7f8fa; color:#1c2230; border-radius:12px; padding:18px; margin:14px 18px;
+  }
+  .doc-header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #dfe3e8; padding-bottom:10px; margin-bottom:10px; }
+  .doc-title{ font-size:13px; font-weight:700; }
+  .doc-sub{ font-size:10px; color:#69707d; margin-top:2px; }
+  .doc-num{ font-size:11px; font-weight:700; text-align:right; }
+  .doc-row{ display:flex; justify-content:space-between; font-size:11.5px; padding:4px 0; color:#3a4150; }
+  .doc-row b{ color:#1c2230; }
+  .doc-table{ width:100%; margin-top:8px; border-collapse:collapse; }
+  .doc-table th{ font-size:10px; text-transform:uppercase; color:#69707d; text-align:left; padding:6px 4px; border-bottom:1px solid #dfe3e8; }
+  .doc-table td{ font-size:11.5px; padding:7px 4px; border-bottom:1px solid #eef0f3; }
+  .doc-total{ display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; margin-top:10px; padding-top:8px; border-top:1px dashed #c7ccd4; }
+  .export-row{ display:flex; gap:10px; padding:4px 18px 18px; }
+
+  .toast{
+    position:absolute; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#1e2b23; color:var(--teal); border:1px solid var(--teal); border-radius:10px;
+    padding:10px 16px; font-size:12.5px; font-weight:600; opacity:0; pointer-events:none;
+    transition:all .25s ease; white-space:nowrap; z-index:20;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---------- HISTORIAL ---------- */
+  .filters{ display:flex; gap:8px; margin-bottom:6px; }
+  .hist-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;
+  }
+  .hist-name{ font-size:13px; font-weight:600; }
+  .hist-meta{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .hist-qty{ font-size:14px; font-weight:700; color:var(--red); }
+  .empty-state{ text-align:center; padding:50px 20px; color:var(--text-faint); font-size:13px; line-height:1.6; }
+
+  /* ---------- BOTTOM NAV ---------- */
+  .bottom-nav{
+    display:flex; border-top:1px solid var(--border); background:#0f1621;
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:11px 0 9px; color:var(--text-faint); cursor:pointer; font-size:10.5px; font-weight:600;
+  }
+  .nav-item.active{ color:var(--teal); }
+  .nav-item svg{ width:20px; height:20px; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ===================== INICIO ===================== -->
+  <div class="screen active" id="screen-inicio">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="greet-label">Control de inventario</div>
+          <div class="greet-name">Empaques</div>
+        </div>
+        <div class="icon-btn" onclick="goTo('historial')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="scroll">
+      <div class="section-title">Existencias actuales</div>
+      <div class="stock-list" id="stockGrid"></div>
+
+      <div class="section-title">Hoy</div>
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:13px; font-weight:600;">Salidas registradas</div>
+          <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">Movimientos del día</div>
+        </div>
+        <div style="font-size:22px; font-weight:700;" id="todayCount">0</div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <button class="cta" onclick="startFlow()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M17 7v10"/></svg>
+          Registrar salida de empaque
+        </button>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" data-nav="inicio" onclick="goTo('inicio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+        Inicio
+      </div>
+      <div class="nav-item" data-nav="escanear" onclick="startFlow()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>
+        Escanear
+      </div>
+      <div class="nav-item" data-nav="historial" onclick="goTo('historial')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        Historial
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ESCANEAR ===================== -->
+  <div class="screen" id="screen-escanear">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="back-btn" onclick="goTo('inicio')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="greet-name" style="font-size:15px;">Registrar salida</div>
+        <div style="width:34px;"></div>
+      </div>
+    </div>
+    <div class="scroll" style="padding-top:6px;">
+      <div class="scan-area">
+        <div class="scan-corner tl"></div><div class="scan-corner tr"></div>
+        <div class="scan-corner bl"></div><div class="scan-corner br"></div>
+        <div class="scan-line" id="scanLine"></div>
+        <div class="scan-hint">Apunta la cámara al código de barras del empaque</div>
+      </div>
+      <div style="padding:0 0 4px;">
+        <button class="cta" onclick="simulateScan()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 3v18M16 3v18"/></svg>
+          Simular lectura de cámara
+        </button>
+      </div>
+
+      <div class="divider-or">o ingresa el código manualmente</div>
+
+      <div class="field" style="padding:0 18px;">
+        <div class="field-label">Código de barras</div>
+        <input type="text" id="manualCode" placeholder="Ej: EMP-003">
+      </div>
+      <div class="error-msg" id="scanError">Código no encontrado en el catálogo de empaques.</div>
+      <div style="padding:10px 18px 18px;">
+        <button class="cta secondary" onclick="lookupManual()">Buscar código</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIRMAR ===================== -->
+  <div class="screen" id="screen-confirmar">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="back-btn" onclick="goTo('escanear')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="greet-name" style="font-size:15px;">Confirmar salida</div>
+        <div style="width:34px;"></div>
+      </div>
+    </div>
+    <div class="scroll" style="padding-top:14px;">
+      <div class="card match-card" id="matchCard"></div>
+
+      <div class="section-title">Cantidad a retirar</div>
+      <div class="stepper">
+        <button onclick="changeQty(-1)">−</button>
+        <div class="qty-value" id="qtyValue">1</div>
+        <button onclick="changeQty(1)">+</button>
+      </div>
+      <div class="error-msg" id="qtyError" style="text-align:center;">La cantidad supera el saldo disponible.</div>
+
+      <div class="field" style="margin-top:16px;">
+        <div class="field-label">Motivo / observación (opcional)</div>
+        <textarea id="notaSalida" rows="2" placeholder="Ej: Empaque de pedido #4521"></textarea>
+      </div>
+
+      <button class="cta" onclick="confirmarSalida()">Registrar salida</button>
+    </div>
+  </div>
+
+  <!-- ===================== ÉXITO ===================== -->
+  <div class="screen" id="screen-exito">
+    <div class="success-wrap">
+      <div class="success-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div class="success-title">Salida registrada</div>
+      <div class="success-sub" id="successDetail">Se descontó del inventario correctamente.</div>
+      <div style="width:100%; display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <button class="cta" onclick="goToDoc()">Generar documento de salida</button>
+        <button class="cta secondary" onclick="goTo('inicio')">Volver al inicio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== DOCUMENTO ===================== -->
+  <div class="screen" id="screen-documento">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="back-btn" onclick="goTo('exito')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="greet-name" style="font-size:15px;">Documento de salida</div>
+        <div style="width:34px;"></div>
+      </div>
+    </div>
+    <div class="scroll" style="padding:0;">
+      <div class="doc-sheet" id="docSheet"></div>
+      <div class="export-row">
+        <button class="cta secondary" style="flex:1;" onclick="exportDoc('PDF')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/></svg>
+          Descargar PDF
+        </button>
+        <button class="cta secondary" style="flex:1;" onclick="exportDoc('Excel')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8l8 8M16 8l-8 8"/></svg>
+          Exportar a Excel
+        </button>
+      </div>
+      <div style="padding:0 18px 20px;">
+        <button class="cta" onclick="goTo('inicio')">Finalizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== HISTORIAL ===================== -->
+  <div class="screen" id="screen-historial">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="back-btn" onclick="goTo('inicio')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="greet-name" style="font-size:15px;">Historial de salidas</div>
+        <div style="width:34px;"></div>
+      </div>
+    </div>
+    <div class="scroll" style="padding-top:12px;">
+      <div class="filters">
+        <select id="filterTipo" onchange="renderHistorial()">
+          <option value="">Todos los empaques</option>
+        </select>
+      </div>
+      <div class="filters">
+        <input type="date" id="filterDesde" onchange="renderHistorial()">
+        <input type="date" id="filterHasta" onchange="renderHistorial()">
+      </div>
+      <div id="histList" style="margin-top:8px;"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('inicio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+        Inicio
+      </div>
+      <div class="nav-item" onclick="startFlow()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>
+        Escanear
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        Historial
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---------- DATA ----------
+  const EMPAQUES = [
+    { code:'EMP-001', name:'Bolsa pequeña', stock:340 },
+    { code:'EMP-002', name:'Bolsa mediana', stock:210 },
+    { code:'EMP-003', name:'Bolsa grande',  stock:95  },
+    { code:'EMP-004', name:'Caja mediana',  stock:150 },
+    { code:'EMP-005', name:'Caja grande',   stock:60  },
+  ];
+  // Historial de ejemplo (más antiguo -> más reciente) para poder filtrar por fecha realistamente
+  let historial = [
+    { id:985, code:'EMP-004', name:'Caja mediana',  qty:10, saldo:180, nota:'Empaque pedido #4488',        date:new Date('2026-09-09T09:15:00') },
+    { id:986, code:'EMP-001', name:'Bolsa pequeña',  qty:40, saldo:460, nota:'Pedidos varios mañana',       date:new Date('2026-09-10T08:40:00') },
+    { id:987, code:'EMP-005', name:'Caja grande',    qty:5,  saldo:70,  nota:'Envío mayorista Bucaramanga', date:new Date('2026-09-10T14:05:00') },
+    { id:988, code:'EMP-003', name:'Bolsa grande',   qty:15, saldo:120, nota:'',                            date:new Date('2026-09-11T10:22:00') },
+    { id:989, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:430, nota:'Pedido #4501',                date:new Date('2026-09-11T16:50:00') },
+    { id:990, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:260, nota:'Reposición mostrador',        date:new Date('2026-09-12T09:05:00') },
+    { id:991, code:'EMP-001', name:'Bolsa pequeña',  qty:60, saldo:370, nota:'Empaque campaña Derek',       date:new Date('2026-09-12T11:30:00') },
+    { id:992, code:'EMP-004', name:'Caja mediana',   qty:20, saldo:160, nota:'',                            date:new Date('2026-09-12T15:47:00') },
+    { id:993, code:'EMP-003', name:'Bolsa grande',   qty:25, saldo:95,  nota:'Pedido #4515',                date:new Date('2026-09-13T08:58:00') },
+    { id:994, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:340, nota:'Empaque pedido #4521',        date:new Date('2026-09-13T13:12:00') },
+    { id:995, code:'EMP-005', name:'Caja grande',    qty:10, saldo:60,  nota:'Envío Girón',                 date:new Date('2026-09-13T17:20:00') },
+    { id:996, code:'EMP-002', name:'Bolsa mediana',  qty:30, saldo:230, nota:'',                            date:new Date('2026-09-14T10:10:00') },
+    { id:997, code:'EMP-004', name:'Caja mediana',   qty:10, saldo:150, nota:'Reposición bodega',           date:new Date('2026-09-14T16:35:00') },
+    { id:998, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:210, nota:'Pedido #4530',                date:new Date('2026-09-14T18:02:00') },
+  ].sort((a,b)=> b.date - a.date);
+  let docCounter = 1000;
+  let pendingItem = null;   // empaque encontrado en escaneo
+  let pendingQty = 1;
+  let lastMovement = null;  // último movimiento registrado (para el documento)
+
+  const iconBox = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>`;
+
+  // ---------- NAV ----------
+  function goTo(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    if(name==='inicio') renderInicio();
+    if(name==='historial') renderHistorial();
+  }
+
+  function startFlow(){
+    document.getElementById('manualCode').value='';
+    document.getElementById('scanError').style.display='none';
+    goTo('escanear');
+  }
+
+  // ---------- INICIO ----------
+  function renderInicio(){
+    const grid = document.getElementById('stockGrid');
+    grid.innerHTML = EMPAQUES.map(e=>`
+      <div class="stock-row">
+        <div class="stock-icon">${iconBox}</div>
+        <div class="stock-row-info">
+          <div class="stock-name">${e.name}</div>
+          <div class="stock-code">${e.code}</div>
+        </div>
+        <div class="stock-qty ${e.stock<100?'low':''}">${e.stock}<span class="stock-unit">uds.</span></div>
+      </div>
+    `).join('');
+
+    const today = new Date().toDateString();
+    const count = historial.filter(h=> new Date(h.date).toDateString()===today).length;
+    document.getElementById('todayCount').textContent = count;
+  }
+
+  // ---------- ESCANEAR ----------
+  function simulateScan(){
+    const item = EMPAQUES[Math.floor(Math.random()*EMPAQUES.length)];
+    openConfirm(item);
+  }
+  function lookupManual(){
+    const val = document.getElementById('manualCode').value.trim().toUpperCase();
+    const item = EMPAQUES.find(e=>e.code===val);
+    const err = document.getElementById('scanError');
+    if(!item){ err.style.display='block'; return; }
+    err.style.display='none';
+    openConfirm(item);
+  }
+
+  // ---------- CONFIRMAR ----------
+  function openConfirm(item){
+    pendingItem = item;
+    pendingQty = 1;
+    document.getElementById('qtyValue').textContent = pendingQty;
+    document.getElementById('notaSalida').value='';
+    document.getElementById('qtyError').style.display='none';
+    document.getElementById('matchCard').innerHTML = `
+      <div class="match-icon">${iconBox}</div>
+      <div>
+        <div class="match-name">${item.name}</div>
+        <div class="match-code">${item.code}</div>
+        <div class="match-stock">Saldo disponible: ${item.stock} uds.</div>
+      </div>
+    `;
+    goTo('confirmar');
+  }
+  function changeQty(delta){
+    const next = pendingQty + delta;
+    if(next<1) return;
+    pendingQty = next;
+    document.getElementById('qtyValue').textContent = pendingQty;
+    document.getElementById('qtyError').style.display = (pendingQty>pendingItem.stock) ? 'block' : 'none';
+  }
+  function confirmarSalida(){
+    if(pendingQty>pendingItem.stock){
+      document.getElementById('qtyError').style.display='block';
+      return;
+    }
+    pendingItem.stock -= pendingQty;
+    const mov = {
+      id: docCounter++,
+      code: pendingItem.code,
+      name: pendingItem.name,
+      qty: pendingQty,
+      saldo: pendingItem.stock,
+      nota: document.getElementById('notaSalida').value.trim(),
+      date: new Date()
+    };
+    historial.unshift(mov);
+    lastMovement = mov;
+    document.getElementById('successDetail').textContent =
+      `${mov.qty} uds. de ${mov.name} (${mov.code}). Saldo actual: ${mov.saldo} uds.`;
+    goTo('exito');
+  }
+
+  // ---------- DOCUMENTO ----------
+  function goToDoc(){
+    const m = lastMovement;
+    const fecha = m.date.toLocaleDateString('es-CO');
+    const hora = m.date.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('docSheet').innerHTML = `
+      <div class="doc-header">
+        <div>
+          <div class="doc-title">Comprobante de salida de empaque</div>
+          <div class="doc-sub">Control de inventario · Empaques</div>
+        </div>
+        <div>
+          <div class="doc-num">N.º ${m.id}</div>
+          <div class="doc-sub">${fecha} · ${hora}</div>
+        </div>
+      </div>
+      <div class="doc-row"><span>Responsable</span><b>Operador CEDI</b></div>
+      <div class="doc-row"><span>Motivo</span><b>${m.nota || 'Sin observación'}</b></div>
+      <table class="doc-table">
+        <tr><th>Código</th><th>Empaque</th><th>Cant.</th><th>Saldo result.</th></tr>
+        <tr>
+          <td>${m.code}</td><td>${m.name}</td><td>${m.qty}</td><td>${m.saldo}</td>
+        </tr>
+      </table>
+      <div class="doc-total"><span>Total unidades retiradas</span><span>${m.qty}</span></div>
+    `;
+    goTo('documento');
+  }
+  function exportDoc(tipo){
+    showToast(`Documento generado en formato ${tipo} (simulado)`);
+  }
+
+  // ---------- HISTORIAL ----------
+  function populateFilterOptions(){
+    const sel = document.getElementById('filterTipo');
+    sel.innerHTML = '<option value="">Todos los empaques</option>' +
+      EMPAQUES.map(e=>`<option value="${e.code}">${e.name}</option>`).join('');
+  }
+  function renderHistorial(){
+    if(document.getElementById('filterTipo').options.length<=1) populateFilterOptions();
+    const tipo = document.getElementById('filterTipo').value;
+    const desde = document.getElementById('filterDesde').value;
+    const hasta = document.getElementById('filterHasta').value;
+
+    let list = historial.slice();
+    if(tipo) list = list.filter(h=>h.code===tipo);
+    if(desde) list = list.filter(h=> new Date(h.date) >= new Date(desde+'T00:00:00'));
+    if(hasta) list = list.filter(h=> new Date(h.date) <= new Date(hasta+'T23:59:59'));
+
+    const box = document.getElementById('histList');
+    if(list.length===0){
+      box.innerHTML = `<div class="empty-state">Aún no hay movimientos registrados.<br>Registra una salida para verla aquí.</div>`;
+      return;
+    }
+    box.innerHTML = list.map(h=>`
+      <div class="hist-item">
+        <div>
+          <div class="hist-name">${h.name}</div>
+          <div class="hist-meta">${h.code} · ${new Date(h.date).toLocaleDateString('es-CO')} ${new Date(h.date).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}${h.nota? ' · '+h.nota:''}</div>
+        </div>
+        <div class="hist-qty">-${h.qty}</div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- TOAST ----------
+  let toastTimer;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+
+  renderInicio();
+</script>
+
+</body>
+</html>
