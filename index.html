@@ -377,15 +377,9 @@
       <div class="success-title">Salida registrada</div>
       <div class="success-sub" id="successDetail">Se descontó del inventario correctamente.</div>
       <div style="width:100%; display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-        <button class="cta" onclick="goToDoc()">Generar documento de salida</button>
-        <input type="file" id="manifestInput" style="display:none;" onchange="attachManifest(this)">
-        <div id="manifestZone">
-          <button class="cta secondary" onclick="document.getElementById('manifestInput').click()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-            Adjuntar manifiesto (opcional)
-          </button>
-        </div>
-        <button class="cta secondary" onclick="goTo('inicio')">Volver al inicio</button>
+        <button class="cta" onclick="goTo('inicio')">Volver al inicio</button>
+        <div class="section-title" style="margin:8px 0 0; text-align:center;">Opcional</div>
+        <button class="cta secondary" onclick="goToDoc()">Ver / generar documento de salida</button>
       </div>
     </div>
   </div>
@@ -394,7 +388,7 @@
   <div class="screen" id="screen-documento">
     <div class="topbar">
       <div class="topbar-row">
-        <div class="back-btn" onclick="goTo('exito')">
+        <div class="back-btn" onclick="goTo('historial')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
         <div class="greet-name" style="font-size:15px;">Documento de salida</div>
@@ -413,6 +407,8 @@
           Exportar a Excel
         </button>
       </div>
+      <input type="file" id="manifestInput" style="display:none;" onchange="attachManifest(this)">
+      <div id="manifestZone" style="padding:0 18px 10px;"></div>
       <div style="padding:0 18px 20px;">
         <button class="cta" onclick="goTo('inicio')">Finalizar</button>
       </div>
@@ -633,11 +629,6 @@
     const totalQty = items.reduce((s,i)=>s+i.qty,0);
     document.getElementById('successDetail').textContent =
       `${items.length} tipo(s) de empaque · ${totalQty} uds. retiradas. Folio N.º ${folio}.`;
-    document.getElementById('manifestZone').innerHTML = `
-      <button class="cta secondary" onclick="document.getElementById('manifestInput').click()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-        Adjuntar manifiesto (opcional)
-      </button>`;
 
     cart = [];
     goTo('exito');
@@ -649,21 +640,43 @@
     const file = input.files[0];
     lastGroup.manifiestoNombre = file.name;
     historial.filter(h=>h.folio===lastGroup.folio).forEach(h=> h.manifiesto = file.name);
-    const sizeKb = Math.max(1, Math.round(file.size/1024));
-    document.getElementById('manifestZone').innerHTML = `
-      <div class="manifest-status">
-        <div class="manifest-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/></svg>
-        </div>
-        <div>
-          <div class="manifest-name">${file.name}</div>
-          <div class="manifest-sub">${sizeKb} KB · adjunto al folio ${lastGroup.folio}</div>
-        </div>
-      </div>`;
+    renderManifestZone();
     showToast('Manifiesto adjunto');
   }
 
+  function renderManifestZone(){
+    const zone = document.getElementById('manifestZone');
+    if(lastGroup.manifiestoNombre){
+      zone.innerHTML = `
+        <div class="manifest-status">
+          <div class="manifest-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/></svg>
+          </div>
+          <div>
+            <div class="manifest-name">${lastGroup.manifiestoNombre}</div>
+            <div class="manifest-sub">Adjunto al folio ${lastGroup.folio}</div>
+          </div>
+        </div>`;
+    } else {
+      zone.innerHTML = `
+        <button class="cta secondary" onclick="document.getElementById('manifestInput').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          Adjuntar manifiesto (opcional)
+        </button>`;
+    }
+  }
+
   // ---------- DOCUMENTO ----------
+  function openFolio(folio){
+    const items = historial.filter(h=>h.folio===folio);
+    if(items.length===0) return;
+    lastGroup = {
+      folio, date:items[0].date, nota:items[0].nota,
+      manifiestoNombre: items.find(i=>i.manifiesto)?.manifiesto || null,
+      items: items.map(i=>({code:i.code, name:i.name, qty:i.qty, saldo:i.saldo}))
+    };
+    goToDoc();
+  }
   function goToDoc(){
     const g = lastGroup;
     const fecha = g.date.toLocaleDateString('es-CO');
@@ -688,6 +701,7 @@
       </table>
       <div class="doc-total"><span>Total unidades retiradas</span><span>${totalQty}</span></div>
     `;
+    renderManifestZone();
     goTo('documento');
   }
   function exportDoc(tipo){
@@ -717,7 +731,7 @@
       return;
     }
     box.innerHTML = list.map(h=>`
-      <div class="hist-item">
+      <div class="hist-item" style="cursor:pointer;" onclick="openFolio(${h.folio})">
         <div>
           <div class="hist-name">${h.name}</div>
           <div class="hist-meta">${h.code} · Folio ${h.folio} · ${new Date(h.date).toLocaleDateString('es-CO')} ${new Date(h.date).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}${h.nota? ' · '+h.nota:''}${h.manifiesto? ' · 📎':''}</div>
