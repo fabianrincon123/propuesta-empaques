@@ -138,6 +138,51 @@
   .field{ margin-bottom:14px; }
   .error-msg{ color:var(--red); font-size:12px; padding:8px 18px 0; display:none; }
 
+  /* ---------- CARRITO DE EMPAQUES ---------- */
+  .cart-list{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    margin:4px 18px 0; overflow:hidden;
+  }
+  .cart-row{
+    display:flex; align-items:center; gap:10px; padding:11px 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .cart-row:last-child{ border-bottom:none; }
+  .cart-icon{
+    width:36px; height:36px; border-radius:9px; background:var(--teal-dim); color:var(--teal);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .cart-info{ flex:1; min-width:0; }
+  .cart-name{ font-size:13px; font-weight:600; }
+  .cart-code{ font-size:11px; color:var(--text-faint); margin-top:1px; }
+  .cart-row-error{ font-size:10.5px; color:var(--red); margin-top:2px; }
+  .cart-stepper{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .cart-stepper button{
+    width:26px; height:26px; border-radius:7px; border:1px solid var(--border); background:var(--bg);
+    color:var(--text); font-size:15px; cursor:pointer; line-height:1;
+  }
+  .cart-stepper button:hover{ background:var(--card-hover); }
+  .cart-stepper .cart-qty{ font-size:14px; font-weight:700; min-width:20px; text-align:center; }
+  .cart-remove{
+    width:26px; height:26px; border-radius:7px; background:var(--red-dim); color:var(--red);
+    border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+  .cart-empty{ text-align:center; padding:26px 20px; color:var(--text-faint); font-size:12.5px; line-height:1.6; }
+  .cart-summary{ display:flex; justify-content:space-between; align-items:center; padding:12px 18px 4px; font-size:12px; color:var(--text-dim); }
+  .cart-summary b{ color:var(--text); }
+
+  /* ---------- MANIFIESTO ---------- */
+  .manifest-status{
+    display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:12px; margin-top:4px; text-align:left; width:100%;
+  }
+  .manifest-icon{
+    width:34px; height:34px; border-radius:9px; background:var(--amber-dim); color:var(--amber);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .manifest-name{ font-size:12.5px; font-weight:600; }
+  .manifest-sub{ font-size:11px; color:var(--text-faint); margin-top:1px; }
+
   /* ---------- CONFIRM SCREEN ---------- */
   .match-card{ display:flex; gap:12px; align-items:center; }
   .match-icon{
@@ -268,7 +313,7 @@
     </div>
   </div>
 
-  <!-- ===================== ESCANEAR ===================== -->
+  <!-- ===================== ESCANEAR / CARRITO ===================== -->
   <div class="screen" id="screen-escanear">
     <div class="topbar">
       <div class="topbar-row">
@@ -296,44 +341,30 @@
       <div class="divider-or">o ingresa el código manualmente</div>
 
       <div class="field" style="padding:0 18px;">
-        <div class="field-label">Código de barras</div>
-        <input type="text" id="manualCode" placeholder="Ej: EMP-003">
+        <div class="field-label">Código de empaque</div>
+        <input type="text" id="manualCode" placeholder="Ej: EMP-003" onkeydown="if(event.key==='Enter'){event.preventDefault(); lookupManual();}">
       </div>
       <div class="error-msg" id="scanError">Código no encontrado en el catálogo de empaques.</div>
-      <div style="padding:10px 18px 18px;">
-        <button class="cta secondary" onclick="lookupManual()">Buscar código</button>
+      <div style="padding:8px 18px 4px;">
+        <button class="cta secondary" onclick="lookupManual()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:6px;"><path d="M12 5v14M5 12h14"/></svg>
+          Agregar a la lista
+        </button>
       </div>
-    </div>
-  </div>
+      <div style="font-size:10.5px; color:var(--text-faint); padding:2px 18px 0;">Mientras no todos los empaques tengan código de barras, escribe el mismo código varias veces para ir sumando cantidad.</div>
 
-  <!-- ===================== CONFIRMAR ===================== -->
-  <div class="screen" id="screen-confirmar">
-    <div class="topbar">
-      <div class="topbar-row">
-        <div class="back-btn" onclick="goTo('escanear')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
-        </div>
-        <div class="greet-name" style="font-size:15px;">Confirmar salida</div>
-        <div style="width:34px;"></div>
-      </div>
-    </div>
-    <div class="scroll" style="padding-top:14px;">
-      <div class="card match-card" id="matchCard"></div>
+      <div class="section-title" style="margin-top:16px;">Empaques a retirar</div>
+      <div class="cart-list" id="cartList"></div>
+      <div class="cart-summary" id="cartSummary"></div>
 
-      <div class="section-title">Cantidad a retirar</div>
-      <div class="stepper">
-        <button onclick="changeQty(-1)">−</button>
-        <div class="qty-value" id="qtyValue">1</div>
-        <button onclick="changeQty(1)">+</button>
-      </div>
-      <div class="error-msg" id="qtyError" style="text-align:center;">La cantidad supera el saldo disponible.</div>
-
-      <div class="field" style="margin-top:16px;">
+      <div class="field" style="padding:0 18px; margin-top:14px;">
         <div class="field-label">Motivo / observación (opcional)</div>
         <textarea id="notaSalida" rows="2" placeholder="Ej: Empaque de pedido #4521"></textarea>
       </div>
 
-      <button class="cta" onclick="confirmarSalida()">Registrar salida</button>
+      <div style="padding:0 18px 18px;">
+        <button class="cta" id="registrarBtn" onclick="registrarSalidaMultiple()" disabled>Registrar salida</button>
+      </div>
     </div>
   </div>
 
@@ -347,6 +378,13 @@
       <div class="success-sub" id="successDetail">Se descontó del inventario correctamente.</div>
       <div style="width:100%; display:flex; flex-direction:column; gap:10px; margin-top:10px;">
         <button class="cta" onclick="goToDoc()">Generar documento de salida</button>
+        <input type="file" id="manifestInput" style="display:none;" onchange="attachManifest(this)">
+        <div id="manifestZone">
+          <button class="cta secondary" onclick="document.getElementById('manifestInput').click()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Adjuntar manifiesto (opcional)
+          </button>
+        </div>
         <button class="cta secondary" onclick="goTo('inicio')">Volver al inicio</button>
       </div>
     </div>
@@ -433,25 +471,25 @@
   ];
   // Historial de ejemplo (más antiguo -> más reciente) para poder filtrar por fecha realistamente
   let historial = [
-    { id:985, code:'EMP-004', name:'Caja mediana',  qty:10, saldo:180, nota:'Empaque pedido #4488',        date:new Date('2026-09-09T09:15:00') },
-    { id:986, code:'EMP-001', name:'Bolsa pequeña',  qty:40, saldo:460, nota:'Pedidos varios mañana',       date:new Date('2026-09-10T08:40:00') },
-    { id:987, code:'EMP-005', name:'Caja grande',    qty:5,  saldo:70,  nota:'Envío mayorista Bucaramanga', date:new Date('2026-09-10T14:05:00') },
-    { id:988, code:'EMP-003', name:'Bolsa grande',   qty:15, saldo:120, nota:'',                            date:new Date('2026-09-11T10:22:00') },
-    { id:989, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:430, nota:'Pedido #4501',                date:new Date('2026-09-11T16:50:00') },
-    { id:990, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:260, nota:'Reposición mostrador',        date:new Date('2026-09-12T09:05:00') },
-    { id:991, code:'EMP-001', name:'Bolsa pequeña',  qty:60, saldo:370, nota:'Empaque campaña Derek',       date:new Date('2026-09-12T11:30:00') },
-    { id:992, code:'EMP-004', name:'Caja mediana',   qty:20, saldo:160, nota:'',                            date:new Date('2026-09-12T15:47:00') },
-    { id:993, code:'EMP-003', name:'Bolsa grande',   qty:25, saldo:95,  nota:'Pedido #4515',                date:new Date('2026-09-13T08:58:00') },
-    { id:994, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:340, nota:'Empaque pedido #4521',        date:new Date('2026-09-13T13:12:00') },
-    { id:995, code:'EMP-005', name:'Caja grande',    qty:10, saldo:60,  nota:'Envío Girón',                 date:new Date('2026-09-13T17:20:00') },
-    { id:996, code:'EMP-002', name:'Bolsa mediana',  qty:30, saldo:230, nota:'',                            date:new Date('2026-09-14T10:10:00') },
-    { id:997, code:'EMP-004', name:'Caja mediana',   qty:10, saldo:150, nota:'Reposición bodega',           date:new Date('2026-09-14T16:35:00') },
-    { id:998, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:210, nota:'Pedido #4530',                date:new Date('2026-09-14T18:02:00') },
+    { id:'985-EMP-004', folio:985, code:'EMP-004', name:'Caja mediana',  qty:10, saldo:180, nota:'Empaque pedido #4488',        manifiesto:null, date:new Date('2026-09-09T09:15:00') },
+    { id:'986-EMP-001', folio:986, code:'EMP-001', name:'Bolsa pequeña',  qty:40, saldo:460, nota:'Pedidos varios mañana',       manifiesto:null, date:new Date('2026-09-10T08:40:00') },
+    { id:'987-EMP-005', folio:987, code:'EMP-005', name:'Caja grande',    qty:5,  saldo:70,  nota:'Envío mayorista Bucaramanga', manifiesto:'guia_transporte.pdf', date:new Date('2026-09-10T14:05:00') },
+    { id:'988-EMP-003', folio:988, code:'EMP-003', name:'Bolsa grande',   qty:15, saldo:120, nota:'',                            manifiesto:null, date:new Date('2026-09-11T10:22:00') },
+    { id:'989-EMP-001', folio:989, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:430, nota:'Pedido #4501',                manifiesto:null, date:new Date('2026-09-11T16:50:00') },
+    { id:'990-EMP-002', folio:990, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:260, nota:'Reposición mostrador',        manifiesto:null, date:new Date('2026-09-12T09:05:00') },
+    { id:'991-EMP-001', folio:991, code:'EMP-001', name:'Bolsa pequeña',  qty:60, saldo:370, nota:'Empaque campaña Derek',       manifiesto:null, date:new Date('2026-09-12T11:30:00') },
+    { id:'991-EMP-004', folio:991, code:'EMP-004', name:'Caja mediana',   qty:20, saldo:160, nota:'Empaque campaña Derek',       manifiesto:null, date:new Date('2026-09-12T11:30:00') },
+    { id:'993-EMP-003', folio:993, code:'EMP-003', name:'Bolsa grande',   qty:25, saldo:95,  nota:'Pedido #4515',                manifiesto:null, date:new Date('2026-09-13T08:58:00') },
+    { id:'994-EMP-001', folio:994, code:'EMP-001', name:'Bolsa pequeña',  qty:30, saldo:340, nota:'Empaque pedido #4521',        manifiesto:null, date:new Date('2026-09-13T13:12:00') },
+    { id:'994-EMP-005', folio:994, code:'EMP-005', name:'Caja grande',    qty:10, saldo:60,  nota:'Empaque pedido #4521',        manifiesto:null, date:new Date('2026-09-13T13:12:00') },
+    { id:'996-EMP-002', folio:996, code:'EMP-002', name:'Bolsa mediana',  qty:30, saldo:230, nota:'',                            manifiesto:null, date:new Date('2026-09-14T10:10:00') },
+    { id:'997-EMP-004', folio:997, code:'EMP-004', name:'Caja mediana',   qty:10, saldo:150, nota:'Reposición bodega',           manifiesto:null, date:new Date('2026-09-14T16:35:00') },
+    { id:'998-EMP-002', folio:998, code:'EMP-002', name:'Bolsa mediana',  qty:20, saldo:210, nota:'Pedido #4530',                manifiesto:null, date:new Date('2026-09-14T18:02:00') },
   ].sort((a,b)=> b.date - a.date);
   let docCounter = 1000;
-  let pendingItem = null;   // empaque encontrado en escaneo
-  let pendingQty = 1;
-  let lastMovement = null;  // último movimiento registrado (para el documento)
+  let cart = [];          // { code, name, qty }
+  let cartErrors = {};    // { code: 'mensaje' }
+  let lastGroup = null;   // { folio, date, nota, items:[{code,name,qty,saldo}], manifiestoNombre }
 
   const iconBox = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>`;
 
@@ -466,6 +504,9 @@
   function startFlow(){
     document.getElementById('manualCode').value='';
     document.getElementById('scanError').style.display='none';
+    cart = [];
+    cartErrors = {};
+    renderCart();
     goTo('escanear');
   }
 
@@ -488,71 +529,146 @@
     document.getElementById('todayCount').textContent = count;
   }
 
-  // ---------- ESCANEAR ----------
+  // ---------- ESCANEAR / CARRITO ----------
   function simulateScan(){
     const item = EMPAQUES[Math.floor(Math.random()*EMPAQUES.length)];
-    openConfirm(item);
+    addToCart(item.code, item.name);
+    showToast(`Agregado: ${item.name}`);
   }
   function lookupManual(){
-    const val = document.getElementById('manualCode').value.trim().toUpperCase();
-    const item = EMPAQUES.find(e=>e.code===val);
+    const input = document.getElementById('manualCode');
+    const val = input.value.trim().toUpperCase();
     const err = document.getElementById('scanError');
+    if(!val){ return; }
+    const item = EMPAQUES.find(e=>e.code===val);
     if(!item){ err.style.display='block'; return; }
     err.style.display='none';
-    openConfirm(item);
+    addToCart(item.code, item.name);
+    input.value='';
+    input.focus();
   }
-
-  // ---------- CONFIRMAR ----------
-  function openConfirm(item){
-    pendingItem = item;
-    pendingQty = 1;
-    document.getElementById('qtyValue').textContent = pendingQty;
-    document.getElementById('notaSalida').value='';
-    document.getElementById('qtyError').style.display='none';
-    document.getElementById('matchCard').innerHTML = `
-      <div class="match-icon">${iconBox}</div>
-      <div>
-        <div class="match-name">${item.name}</div>
-        <div class="match-code">${item.code}</div>
-        <div class="match-stock">Saldo disponible: ${item.stock} uds.</div>
-      </div>
-    `;
-    goTo('confirmar');
+  function addToCart(code, name){
+    const existing = cart.find(c=>c.code===code);
+    if(existing){ existing.qty += 1; }
+    else{ cart.push({ code, name, qty:1 }); }
+    delete cartErrors[code];
+    renderCart();
   }
-  function changeQty(delta){
-    const next = pendingQty + delta;
-    if(next<1) return;
-    pendingQty = next;
-    document.getElementById('qtyValue').textContent = pendingQty;
-    document.getElementById('qtyError').style.display = (pendingQty>pendingItem.stock) ? 'block' : 'none';
+  function changeCartQty(code, delta){
+    const row = cart.find(c=>c.code===code);
+    if(!row) return;
+    const next = row.qty + delta;
+    if(next<1){ removeFromCart(code); return; }
+    row.qty = next;
+    delete cartErrors[code];
+    renderCart();
   }
-  function confirmarSalida(){
-    if(pendingQty>pendingItem.stock){
-      document.getElementById('qtyError').style.display='block';
+  function removeFromCart(code){
+    cart = cart.filter(c=>c.code!==code);
+    delete cartErrors[code];
+    renderCart();
+  }
+  function renderCart(){
+    const box = document.getElementById('cartList');
+    const summary = document.getElementById('cartSummary');
+    const btn = document.getElementById('registrarBtn');
+    if(cart.length===0){
+      box.innerHTML = `<div class="cart-empty">Aún no has agregado empaques.<br>Escanea o escribe un código para comenzar.</div>`;
+      summary.innerHTML = '';
+      btn.disabled = true;
       return;
     }
-    pendingItem.stock -= pendingQty;
-    const mov = {
-      id: docCounter++,
-      code: pendingItem.code,
-      name: pendingItem.name,
-      qty: pendingQty,
-      saldo: pendingItem.stock,
-      nota: document.getElementById('notaSalida').value.trim(),
-      date: new Date()
-    };
-    historial.unshift(mov);
-    lastMovement = mov;
+    box.innerHTML = cart.map(c=>{
+      const err = cartErrors[c.code];
+      return `
+      <div class="cart-row">
+        <div class="cart-icon">${iconBox}</div>
+        <div class="cart-info">
+          <div class="cart-name">${c.name}</div>
+          <div class="cart-code">${c.code}</div>
+          ${err ? `<div class="cart-row-error">${err}</div>` : ``}
+        </div>
+        <div class="cart-stepper">
+          <button onclick="changeCartQty('${c.code}',-1)">−</button>
+          <div class="cart-qty">${c.qty}</div>
+          <button onclick="changeCartQty('${c.code}',1)">+</button>
+        </div>
+        <button class="cart-remove" onclick="removeFromCart('${c.code}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>`;
+    }).join('');
+    const totalQty = cart.reduce((s,c)=>s+c.qty,0);
+    summary.innerHTML = `<span>${cart.length} tipo(s) de empaque</span><b>${totalQty} uds. en total</b>`;
+    btn.disabled = false;
+  }
+
+  function registrarSalidaMultiple(){
+    cartErrors = {};
+    let valid = true;
+    cart.forEach(c=>{
+      const stockItem = EMPAQUES.find(e=>e.code===c.code);
+      if(c.qty > stockItem.stock){
+        cartErrors[c.code] = `Solo hay ${stockItem.stock} uds. disponibles.`;
+        valid = false;
+      }
+    });
+    if(!valid){ renderCart(); return; }
+
+    const folio = docCounter++;
+    const date = new Date();
+    const nota = document.getElementById('notaSalida').value.trim();
+    const items = [];
+
+    cart.forEach(c=>{
+      const stockItem = EMPAQUES.find(e=>e.code===c.code);
+      stockItem.stock -= c.qty;
+      const mov = { id: folio+'-'+c.code, folio, code:c.code, name:c.name, qty:c.qty, saldo:stockItem.stock, nota, date, manifiesto:null };
+      historial.unshift(mov);
+      items.push({ code:c.code, name:c.name, qty:c.qty, saldo:stockItem.stock });
+    });
+
+    lastGroup = { folio, date, nota, items, manifiestoNombre:null };
+
+    const totalQty = items.reduce((s,i)=>s+i.qty,0);
     document.getElementById('successDetail').textContent =
-      `${mov.qty} uds. de ${mov.name} (${mov.code}). Saldo actual: ${mov.saldo} uds.`;
+      `${items.length} tipo(s) de empaque · ${totalQty} uds. retiradas. Folio N.º ${folio}.`;
+    document.getElementById('manifestZone').innerHTML = `
+      <button class="cta secondary" onclick="document.getElementById('manifestInput').click()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        Adjuntar manifiesto (opcional)
+      </button>`;
+
+    cart = [];
     goTo('exito');
+  }
+
+  // ---------- MANIFIESTO ----------
+  function attachManifest(input){
+    if(!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    lastGroup.manifiestoNombre = file.name;
+    historial.filter(h=>h.folio===lastGroup.folio).forEach(h=> h.manifiesto = file.name);
+    const sizeKb = Math.max(1, Math.round(file.size/1024));
+    document.getElementById('manifestZone').innerHTML = `
+      <div class="manifest-status">
+        <div class="manifest-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/></svg>
+        </div>
+        <div>
+          <div class="manifest-name">${file.name}</div>
+          <div class="manifest-sub">${sizeKb} KB · adjunto al folio ${lastGroup.folio}</div>
+        </div>
+      </div>`;
+    showToast('Manifiesto adjunto');
   }
 
   // ---------- DOCUMENTO ----------
   function goToDoc(){
-    const m = lastMovement;
-    const fecha = m.date.toLocaleDateString('es-CO');
-    const hora = m.date.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    const g = lastGroup;
+    const fecha = g.date.toLocaleDateString('es-CO');
+    const hora = g.date.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    const totalQty = g.items.reduce((s,i)=>s+i.qty,0);
     document.getElementById('docSheet').innerHTML = `
       <div class="doc-header">
         <div>
@@ -560,19 +676,17 @@
           <div class="doc-sub">Control de inventario · Empaques</div>
         </div>
         <div>
-          <div class="doc-num">N.º ${m.id}</div>
+          <div class="doc-num">N.º ${g.folio}</div>
           <div class="doc-sub">${fecha} · ${hora}</div>
         </div>
       </div>
       <div class="doc-row"><span>Responsable</span><b>Operador CEDI</b></div>
-      <div class="doc-row"><span>Motivo</span><b>${m.nota || 'Sin observación'}</b></div>
+      <div class="doc-row"><span>Motivo</span><b>${g.nota || 'Sin observación'}</b></div>
       <table class="doc-table">
         <tr><th>Código</th><th>Empaque</th><th>Cant.</th><th>Saldo result.</th></tr>
-        <tr>
-          <td>${m.code}</td><td>${m.name}</td><td>${m.qty}</td><td>${m.saldo}</td>
-        </tr>
+        ${g.items.map(i=>`<tr><td>${i.code}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.saldo}</td></tr>`).join('')}
       </table>
-      <div class="doc-total"><span>Total unidades retiradas</span><span>${m.qty}</span></div>
+      <div class="doc-total"><span>Total unidades retiradas</span><span>${totalQty}</span></div>
     `;
     goTo('documento');
   }
@@ -606,7 +720,7 @@
       <div class="hist-item">
         <div>
           <div class="hist-name">${h.name}</div>
-          <div class="hist-meta">${h.code} · ${new Date(h.date).toLocaleDateString('es-CO')} ${new Date(h.date).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}${h.nota? ' · '+h.nota:''}</div>
+          <div class="hist-meta">${h.code} · Folio ${h.folio} · ${new Date(h.date).toLocaleDateString('es-CO')} ${new Date(h.date).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}${h.nota? ' · '+h.nota:''}${h.manifiesto? ' · 📎':''}</div>
         </div>
         <div class="hist-qty">-${h.qty}</div>
       </div>
@@ -624,6 +738,7 @@
   }
 
   renderInicio();
+  renderCart();
 </script>
 
 </body>
